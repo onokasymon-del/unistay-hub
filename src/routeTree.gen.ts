@@ -12,8 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListHostelRouteImport } from './routes/list-hostel'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SignupStudentRouteImport } from './routes/signup.student'
+import { Route as SignupLandlordRouteImport } from './routes/signup.landlord'
 import { Route as HostelHostelIdRouteImport } from './routes/hostel.$hostelId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -31,6 +34,11 @@ const ListHostelRoute = ListHostelRouteImport.update({
   path: '/list-hostel',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -41,6 +49,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupStudentRoute = SignupStudentRouteImport.update({
+  id: '/student',
+  path: '/student',
+  getParentRoute: () => SignupRoute,
+} as any)
+const SignupLandlordRoute = SignupLandlordRouteImport.update({
+  id: '/landlord',
+  path: '/landlord',
+  getParentRoute: () => SignupRoute,
+} as any)
 const HostelHostelIdRoute = HostelHostelIdRouteImport.update({
   id: '/hostel/$hostelId',
   path: '/hostel/$hostelId',
@@ -50,61 +68,80 @@ const HostelHostelIdRoute = HostelHostelIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/list-hostel': typeof ListHostelRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/hostel/$hostelId': typeof HostelHostelIdRoute
+  '/signup/landlord': typeof SignupLandlordRoute
+  '/signup/student': typeof SignupStudentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/list-hostel': typeof ListHostelRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/hostel/$hostelId': typeof HostelHostelIdRoute
+  '/signup/landlord': typeof SignupLandlordRoute
+  '/signup/student': typeof SignupStudentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/list-hostel': typeof ListHostelRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/hostel/$hostelId': typeof HostelHostelIdRoute
+  '/signup/landlord': typeof SignupLandlordRoute
+  '/signup/student': typeof SignupStudentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/about'
+    | '/account'
     | '/list-hostel'
     | '/login'
     | '/signup'
     | '/hostel/$hostelId'
+    | '/signup/landlord'
+    | '/signup/student'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/account'
     | '/list-hostel'
     | '/login'
     | '/signup'
     | '/hostel/$hostelId'
+    | '/signup/landlord'
+    | '/signup/student'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/account'
     | '/list-hostel'
     | '/login'
     | '/signup'
     | '/hostel/$hostelId'
+    | '/signup/landlord'
+    | '/signup/student'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRoute
   ListHostelRoute: typeof ListHostelRoute
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
+  SignupRoute: typeof SignupRouteWithChildren
   HostelHostelIdRoute: typeof HostelHostelIdRoute
 }
 
@@ -131,6 +168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListHostelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -145,6 +189,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup/student': {
+      id: '/signup/student'
+      path: '/student'
+      fullPath: '/signup/student'
+      preLoaderRoute: typeof SignupStudentRouteImport
+      parentRoute: typeof SignupRoute
+    }
+    '/signup/landlord': {
+      id: '/signup/landlord'
+      path: '/landlord'
+      fullPath: '/signup/landlord'
+      preLoaderRoute: typeof SignupLandlordRouteImport
+      parentRoute: typeof SignupRoute
+    }
     '/hostel/$hostelId': {
       id: '/hostel/$hostelId'
       path: '/hostel/$hostelId'
@@ -155,12 +213,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SignupRouteChildren {
+  SignupLandlordRoute: typeof SignupLandlordRoute
+  SignupStudentRoute: typeof SignupStudentRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupLandlordRoute: SignupLandlordRoute,
+  SignupStudentRoute: SignupStudentRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountRoute: AccountRoute,
   ListHostelRoute: ListHostelRoute,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
+  SignupRoute: SignupRouteWithChildren,
   HostelHostelIdRoute: HostelHostelIdRoute,
 }
 export const routeTree = rootRouteImport
