@@ -1,11 +1,11 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Heart, MapPin, Share2, Star, Users, Wifi, Droplets, Shield, Zap, ShirtIcon, Car, BookOpen } from "lucide-react";
 import { useState } from "react";
-import { AMENITY_LABELS, HOSTELS, ROOM_TYPE_LABELS, type Amenity } from "@/data/hostels";
+import { AMENITY_LABELS, HOSTELS, ROOM_TYPE_LABELS, type Amenity, type Hostel } from "@/data/hostels";
 import { formatPrice } from "@/lib/format";
 
 export const Route = createFileRoute("/hostel/$hostelId")({
-  loader: ({ params }) => {
+  loader: ({ params }): { hostel: Hostel } => {
     const hostel = HOSTELS.find((h) => h.id === params.hostelId);
     if (!hostel) throw notFound();
     return { hostel };
