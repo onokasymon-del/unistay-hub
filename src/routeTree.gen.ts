@@ -9,38 +9,82 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ListHostelRouteImport } from './routes/list-hostel'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HostelHostelIdRouteImport } from './routes/hostel.$hostelId'
 
+const ListHostelRoute = ListHostelRouteImport.update({
+  id: '/list-hostel',
+  path: '/list-hostel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HostelHostelIdRoute = HostelHostelIdRouteImport.update({
+  id: '/hostel/$hostelId',
+  path: '/hostel/$hostelId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/list-hostel': typeof ListHostelRoute
+  '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/list-hostel': typeof ListHostelRoute
+  '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/list-hostel': typeof ListHostelRoute
+  '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
+  id: '__root__' | '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  ListHostelRoute: typeof ListHostelRoute
+  HostelHostelIdRoute: typeof HostelHostelIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/list-hostel': {
+      id: '/list-hostel'
+      path: '/list-hostel'
+      fullPath: '/list-hostel'
+      preLoaderRoute: typeof ListHostelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +92,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hostel/$hostelId': {
+      id: '/hostel/$hostelId'
+      path: '/hostel/$hostelId'
+      fullPath: '/hostel/$hostelId'
+      preLoaderRoute: typeof HostelHostelIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  ListHostelRoute: ListHostelRoute,
+  HostelHostelIdRoute: HostelHostelIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
