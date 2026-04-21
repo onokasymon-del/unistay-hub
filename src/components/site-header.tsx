@@ -1,9 +1,18 @@
-import { Link } from "@tanstack/react-router";
-import { Search, Heart, Menu, X } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Search, Heart, Menu, X, LogOut, User as UserIcon } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/auth/auth-context";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, profile, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setOpen(false);
+    navigate({ to: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
@@ -57,20 +66,38 @@ export function SiteHeader() {
           >
             <Search className="h-5 w-5" />
           </Link>
-          <button
-            disabled
-            className="hidden sm:inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-medium text-muted-foreground"
-            title="Sign in (coming soon)"
-          >
-            Sign in
-          </button>
-          <button
-            disabled
-            className="hidden sm:inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] hover:opacity-95"
-            title="Sign up (coming soon)"
-          >
-            Sign up
-          </button>
+
+          {loading ? (
+            <div className="hidden sm:block h-10 w-24 rounded-full bg-muted animate-pulse" />
+          ) : isAuthenticated ? (
+            <Link
+              to="/account"
+              className="hidden sm:inline-flex h-10 items-center gap-2 rounded-full border border-border pl-1 pr-3 text-sm font-medium hover:bg-muted"
+            >
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                {profile?.full_name?.[0]?.toUpperCase() ?? <UserIcon className="h-4 w-4" />}
+              </span>
+              <span className="max-w-[8rem] truncate">
+                {profile?.full_name?.split(" ")[0] ?? "Account"}
+              </span>
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="hidden sm:inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-medium hover:bg-muted"
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/signup"
+                className="hidden sm:inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] hover:opacity-95"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
+
           <button
             className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground"
             onClick={() => setOpen((v) => !v)}
@@ -93,20 +120,41 @@ export function SiteHeader() {
             <Link to="/list-hostel" onClick={() => setOpen(false)} className="py-3 text-base font-medium">
               List your hostel
             </Link>
-            <div className="grid grid-cols-2 gap-2 py-3">
-              <button
-                disabled
-                className="h-11 rounded-full border border-border text-sm font-medium text-muted-foreground"
-              >
-                Sign in
-              </button>
-              <button
-                disabled
-                className="h-11 rounded-full bg-accent text-sm font-semibold text-accent-foreground"
-              >
-                Sign up
-              </button>
-            </div>
+
+            {isAuthenticated ? (
+              <div className="grid gap-2 py-3">
+                <Link
+                  to="/account"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-border text-sm font-medium"
+                >
+                  My account
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-muted text-sm font-medium"
+                >
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 py-3">
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-border text-sm font-medium"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       )}
