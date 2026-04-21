@@ -9,11 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ListHostelRouteImport } from './routes/list-hostel'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HostelHostelIdRouteImport } from './routes/hostel.$hostelId'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ListHostelRoute = ListHostelRouteImport.update({
   id: '/list-hostel',
   path: '/list-hostel',
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/list-hostel': typeof ListHostelRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/list-hostel': typeof ListHostelRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRoutesById {
@@ -52,25 +68,62 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/list-hostel': typeof ListHostelRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/hostel/$hostelId': typeof HostelHostelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/list-hostel'
+    | '/login'
+    | '/signup'
+    | '/hostel/$hostelId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
-  id: '__root__' | '/' | '/about' | '/list-hostel' | '/hostel/$hostelId'
+  to:
+    | '/'
+    | '/about'
+    | '/list-hostel'
+    | '/login'
+    | '/signup'
+    | '/hostel/$hostelId'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/list-hostel'
+    | '/login'
+    | '/signup'
+    | '/hostel/$hostelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   ListHostelRoute: typeof ListHostelRoute
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
   HostelHostelIdRoute: typeof HostelHostelIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/list-hostel': {
       id: '/list-hostel'
       path: '/list-hostel'
@@ -106,8 +159,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   ListHostelRoute: ListHostelRoute,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
   HostelHostelIdRoute: HostelHostelIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
