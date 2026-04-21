@@ -52,7 +52,7 @@ const mockReviews = [
 ];
 
 function HostelDetail() {
-  const { hostel } = Route.useLoaderData();
+  const { hostel } = Route.useLoaderData() as { hostel: Hostel };
   const [active, setActive] = useState(0);
   const soldOut = hostel.slotsLeft === 0;
 
