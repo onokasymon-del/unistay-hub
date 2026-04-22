@@ -1,8 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X, Sparkles } from "lucide-react";
-import { HOSTELS, INSTITUTIONS, AMENITY_LABELS, ROOM_TYPE_LABELS, type Amenity, type RoomType } from "@/data/hostels";
 import { HostelCard, HostelCardSkeleton } from "@/components/hostel-card";
+import {
+  AMENITY_LABELS,
+  ROOM_TYPE_LABELS,
+  listHostels,
+  listInstitutions,
+  listWishlistIds,
+  type Amenity,
+  type Hostel,
+  type RoomType,
+} from "@/lib/hostels-api";
+import { useAuth } from "@/auth/auth-context";
 import heroImg from "@/assets/hero-hostel.jpg";
 
 export const Route = createFileRoute("/")({
@@ -30,6 +40,12 @@ const ALL_AMENITIES: Amenity[] = ["wifi", "water", "security", "electricity", "l
 const ALL_ROOMS: RoomType[] = ["single", "shared", "ensuite"];
 
 function BrowsePage() {
+  const { user, profile } = useAuth();
+  const [hostels, setHostels] = useState<Hostel[]>([]);
+  const [institutions, setInstitutions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
+
   const [query, setQuery] = useState("");
   const [institution, setInstitution] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<number>(12000);
@@ -39,8 +55,36 @@ function BrowsePage() {
   const [sort, setSort] = useState<SortKey>("popular");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([listHostels(), listInstitutions()])
+      .then(([h, ins]) => {
+        if (!active) return;
+        setHostels(h);
+        setInstitutions(ins);
+      })
+      .catch(() => {
+        if (!active) return;
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user || profile?.role !== "student") {
+      setWishlist(new Set());
+      return;
+    }
+    listWishlistIds(user.id).then(setWishlist).catch(() => undefined);
+  }, [user, profile?.role]);
+
   const filtered = useMemo(() => {
-    let list = HOSTELS.filter((h) => {
+    let list = hostels.filter((h) => {
       if (query) {
         const q = query.toLowerCase();
         if (
@@ -52,26 +96,26 @@ function BrowsePage() {
         }
       }
       if (institution && h.institution !== institution) return false;
-      if (h.pricePerMonth > maxPrice) return false;
-      if (h.distanceKm > maxDistance) return false;
-      if (rooms.size > 0 && !h.roomTypes.some((r) => rooms.has(r))) return false;
+      if (h.price_per_month > maxPrice) return false;
+      if (h.distance_km > maxDistance) return false;
+      if (rooms.size > 0 && !h.room_types.some((r) => rooms.has(r))) return false;
       if (amenities.size > 0 && !Array.from(amenities).every((a) => h.amenities.includes(a))) return false;
       return true;
     });
 
     list = [...list].sort((a, b) => {
       switch (sort) {
-        case "price-asc": return a.pricePerMonth - b.pricePerMonth;
-        case "price-desc": return b.pricePerMonth - a.pricePerMonth;
-        case "available": return b.slotsLeft - a.slotsLeft;
+        case "price-asc": return a.price_per_month - b.price_per_month;
+        case "price-desc": return b.price_per_month - a.price_per_month;
+        case "available": return b.slots_left - a.slots_left;
         case "popular":
         default:
-          return b.reviewsCount * b.rating - a.reviewsCount * a.rating;
+          return b.reviews_count * b.rating - a.reviews_count * a.rating;
       }
     });
 
     return list;
-  }, [query, institution, maxPrice, maxDistance, rooms, amenities, sort]);
+  }, [hostels, query, institution, maxPrice, maxDistance, rooms, amenities, sort]);
 
   const activeFilterCount =
     (institution ? 1 : 0) +
@@ -83,14 +127,16 @@ function BrowsePage() {
   function toggleRoom(r: RoomType) {
     setRooms((prev) => {
       const next = new Set(prev);
-      next.has(r) ? next.delete(r) : next.add(r);
+      if (next.has(r)) next.delete(r);
+      else next.add(r);
       return next;
     });
   }
   function toggleAmenity(a: Amenity) {
     setAmenities((prev) => {
       const next = new Set(prev);
-      next.has(a) ? next.delete(a) : next.add(a);
+      if (next.has(a)) next.delete(a);
+      else next.add(a);
       return next;
     });
   }
@@ -100,6 +146,15 @@ function BrowsePage() {
     setMaxDistance(5);
     setRooms(new Set());
     setAmenities(new Set());
+  }
+
+  function handleWishlistChange(hostelId: string, next: boolean) {
+    setWishlist((prev) => {
+      const n = new Set(prev);
+      if (next) n.add(hostelId);
+      else n.delete(hostelId);
+      return n;
+    });
   }
 
   return (
@@ -128,7 +183,6 @@ function BrowsePage() {
             </p>
           </div>
 
-          {/* Search bar */}
           <div id="search" className="mt-8 max-w-3xl rounded-2xl bg-background p-2 shadow-[var(--shadow-elevated)]">
             <div className="grid gap-2 md:grid-cols-[1fr_220px_auto]">
               <label className="relative">
@@ -146,7 +200,7 @@ function BrowsePage() {
                 className="h-12 rounded-xl bg-muted px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">All institutions</option>
-                {INSTITUTIONS.map((i) => (
+                {institutions.map((i) => (
                   <option key={i} value={i}>{i}</option>
                 ))}
               </select>
@@ -160,8 +214,8 @@ function BrowsePage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-primary-foreground/80">
-            <span><strong className="text-primary-foreground">500+</strong> hostels</span>
-            <span><strong className="text-primary-foreground">20</strong> campuses</span>
+            <span><strong className="text-primary-foreground">{hostels.length}+</strong> hostels</span>
+            <span><strong className="text-primary-foreground">{institutions.length}</strong> campuses</span>
             <span><strong className="text-primary-foreground">12k</strong> students helped</span>
           </div>
         </div>
@@ -173,7 +227,9 @@ function BrowsePage() {
           <div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Hostels for you</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {filtered.length} {filtered.length === 1 ? "place" : "places"} match your search
+              {loading
+                ? "Loading hostels…"
+                : `${filtered.length} ${filtered.length === 1 ? "place" : "places"} match your search`}
             </p>
           </div>
 
@@ -204,9 +260,9 @@ function BrowsePage() {
         </div>
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[280px_1fr]">
-          {/* Desktop filters */}
           <aside className="hidden lg:block">
             <FilterPanel
+              institutions={institutions}
               institution={institution}
               setInstitution={setInstitution}
               maxPrice={maxPrice}
@@ -222,12 +278,24 @@ function BrowsePage() {
           </aside>
 
           <div>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <HostelCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
               <EmptyResults onReset={resetFilters} />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((h, i) => (
-                  <HostelCard key={h.id} hostel={h} priority={i < 2} />
+                  <HostelCard
+                    key={h.id}
+                    hostel={h}
+                    priority={i < 2}
+                    wishlisted={wishlist.has(h.id)}
+                    onWishlistChange={handleWishlistChange}
+                  />
                 ))}
               </div>
             )}
@@ -235,7 +303,6 @@ function BrowsePage() {
         </div>
       </section>
 
-      {/* Mobile filter sheet */}
       {filtersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setFiltersOpen(false)} />
@@ -252,6 +319,7 @@ function BrowsePage() {
             </div>
             <div className="overflow-y-auto p-4">
               <FilterPanel
+                institutions={institutions}
                 institution={institution}
                 setInstitution={setInstitution}
                 maxPrice={maxPrice}
@@ -287,6 +355,7 @@ function BrowsePage() {
 }
 
 interface FilterProps {
+  institutions: string[];
   institution: string;
   setInstitution: (v: string) => void;
   maxPrice: number;
@@ -318,7 +387,7 @@ function FilterPanel(p: FilterProps) {
           className="mt-2 w-full h-11 rounded-xl border border-border bg-background px-3 text-sm"
         >
           <option value="">All institutions</option>
-          {INSTITUTIONS.map((i) => (
+          {p.institutions.map((i) => (
             <option key={i} value={i}>{i}</option>
           ))}
         </select>
@@ -417,17 +486,6 @@ function EmptyResults({ onReset }: { onReset: () => void }) {
       >
         Reset filters
       </button>
-    </div>
-  );
-}
-
-// Loading state for suspense (kept for future API integration)
-export function _BrowseSkeleton() {
-  return (
-    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <HostelCardSkeleton key={i} />
-      ))}
     </div>
   );
 }

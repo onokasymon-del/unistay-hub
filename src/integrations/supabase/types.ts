@@ -14,6 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          hostel_id: string
+          id: string
+          message: string | null
+          months: number
+          move_in_date: string
+          room_type: Database["public"]["Enums"]["room_type"]
+          status: Database["public"]["Enums"]["booking_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hostel_id: string
+          id?: string
+          message?: string | null
+          months?: number
+          move_in_date: string
+          room_type: Database["public"]["Enums"]["room_type"]
+          status?: Database["public"]["Enums"]["booking_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hostel_id?: string
+          id?: string
+          message?: string | null
+          months?: number
+          move_in_date?: string
+          room_type?: Database["public"]["Enums"]["room_type"]
+          status?: Database["public"]["Enums"]["booking_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hostel_images: {
+        Row: {
+          created_at: string
+          hostel_id: string
+          id: string
+          position: number
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          hostel_id: string
+          id?: string
+          position?: number
+          url: string
+        }
+        Update: {
+          created_at?: string
+          hostel_id?: string
+          id?: string
+          position?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostel_images_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hostels: {
+        Row: {
+          amenities: Database["public"]["Enums"]["amenity"][]
+          created_at: string
+          currency: string
+          description: string
+          distance_km: number
+          id: string
+          institution: string
+          is_published: boolean
+          location: string
+          name: string
+          owner_id: string
+          price_per_month: number
+          rating: number
+          reviews_count: number
+          room_types: Database["public"]["Enums"]["room_type"][]
+          rules: string[]
+          slots_left: number
+          slug: string | null
+          total_slots: number
+          updated_at: string
+        }
+        Insert: {
+          amenities?: Database["public"]["Enums"]["amenity"][]
+          created_at?: string
+          currency?: string
+          description?: string
+          distance_km?: number
+          id?: string
+          institution: string
+          is_published?: boolean
+          location: string
+          name: string
+          owner_id: string
+          price_per_month: number
+          rating?: number
+          reviews_count?: number
+          room_types?: Database["public"]["Enums"]["room_type"][]
+          rules?: string[]
+          slots_left?: number
+          slug?: string | null
+          total_slots?: number
+          updated_at?: string
+        }
+        Update: {
+          amenities?: Database["public"]["Enums"]["amenity"][]
+          created_at?: string
+          currency?: string
+          description?: string
+          distance_km?: number
+          id?: string
+          institution?: string
+          is_published?: boolean
+          location?: string
+          name?: string
+          owner_id?: string
+          price_per_month?: number
+          rating?: number
+          reviews_count?: number
+          room_types?: Database["public"]["Enums"]["room_type"][]
+          rules?: string[]
+          slots_left?: number
+          slug?: string | null
+          total_slots?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -56,6 +204,44 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          hostel_id: string
+          id: string
+          rating: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string
+          created_at?: string
+          hostel_id: string
+          id?: string
+          rating: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          hostel_id?: string
+          id?: string
+          rating?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -77,11 +263,44 @@ export type Database = {
         }
         Relationships: []
       }
+      wishlist: {
+        Row: {
+          created_at: string
+          hostel_id: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          hostel_id: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          hostel_id?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_approved_booking: {
+        Args: { _hostel_id: string; _student_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -91,8 +310,18 @@ export type Database = {
       }
     }
     Enums: {
+      amenity:
+        | "wifi"
+        | "water"
+        | "security"
+        | "electricity"
+        | "laundry"
+        | "parking"
+        | "study"
       app_role: "student" | "landlord" | "admin"
+      booking_status: "pending" | "approved" | "rejected" | "cancelled"
       institution_type: "university" | "college" | "tti"
+      room_type: "single" | "shared" | "ensuite"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -220,8 +449,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      amenity: [
+        "wifi",
+        "water",
+        "security",
+        "electricity",
+        "laundry",
+        "parking",
+        "study",
+      ],
       app_role: ["student", "landlord", "admin"],
+      booking_status: ["pending", "approved", "rejected", "cancelled"],
       institution_type: ["university", "college", "tti"],
+      room_type: ["single", "shared", "ensuite"],
     },
   },
 } as const

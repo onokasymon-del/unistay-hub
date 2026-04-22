@@ -38,7 +38,7 @@ function SignupChooser() {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-primary hover:underline">
+        <Link to="/login" search={{ redirect: undefined }} className="font-semibold text-primary hover:underline">
           Sign in
         </Link>
       </p>
