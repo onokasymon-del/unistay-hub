@@ -49,6 +49,15 @@ export function SiteHeader() {
           >
             List your hostel
           </Link>
+          {isAuthenticated && (
+            <Link
+              to="/dashboard"
+              className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              activeProps={{ className: "px-3 py-2 text-sm font-medium text-foreground" }}
+            >
+              Dashboard
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto md:ml-2 flex items-center gap-2">
@@ -121,6 +130,11 @@ export function SiteHeader() {
             <Link to="/list-hostel" onClick={() => setOpen(false)} className="py-3 text-base font-medium">
               List your hostel
             </Link>
+            {isAuthenticated && (
+              <Link to="/dashboard" onClick={() => setOpen(false)} className="py-3 text-base font-medium">
+                Dashboard
+              </Link>
+            )}
 
             {isAuthenticated ? (
               <div className="grid gap-2 py-3">

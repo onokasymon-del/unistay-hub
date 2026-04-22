@@ -71,18 +71,26 @@ function AccountPage() {
         </dl>
 
         <div className="mt-8 border-t border-border pt-6">
-          <h2 className="text-sm font-semibold">Coming next</h2>
+          <h2 className="text-sm font-semibold">Your dashboard</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {profile.role === "landlord"
-              ? "Verification, hostel management and bookings dashboard land in Phase 4."
-              : "Bookings, wishlists and roommate matching arrive in Phase 3."}
+              ? "Manage your hostels and review incoming booking requests."
+              : "Track your bookings, reviews and wishlist in one place."}
           </p>
-          <Link
-            to="/"
-            className="mt-4 inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
-          >
-            Browse hostels
-          </Link>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              to="/dashboard"
+              className="inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
+            >
+              Open dashboard
+            </Link>
+            <Link
+              to="/"
+              className="inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-semibold hover:bg-muted"
+            >
+              Browse hostels
+            </Link>
+          </div>
         </div>
       </div>
     </div>
