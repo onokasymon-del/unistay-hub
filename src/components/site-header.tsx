@@ -85,6 +85,7 @@ export function SiteHeader() {
             <>
               <Link
                 to="/login"
+                search={{ redirect: undefined }}
                 className="hidden sm:inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-medium hover:bg-muted"
               >
                 Sign in
@@ -141,6 +142,7 @@ export function SiteHeader() {
               <div className="grid grid-cols-2 gap-2 py-3">
                 <Link
                   to="/login"
+                  search={{ redirect: undefined }}
                   onClick={() => setOpen(false)}
                   className="inline-flex h-11 items-center justify-center rounded-full border border-border text-sm font-medium"
                 >

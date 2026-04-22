@@ -204,7 +204,7 @@ function StudentSignup() {
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Have an account?{" "}
-          <Link to="/login" className="font-semibold text-primary hover:underline">
+          <Link to="/login" search={{ redirect: undefined }} className="font-semibold text-primary hover:underline">
             Sign in
           </Link>
         </p>
