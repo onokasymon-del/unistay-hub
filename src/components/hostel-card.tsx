@@ -1,21 +1,49 @@
 import { Link } from "@tanstack/react-router";
 import { Star, MapPin, Heart } from "lucide-react";
-import type { Hostel } from "@/data/hostels";
+import { toast } from "sonner";
+import type { Hostel } from "@/lib/hostels-api";
+import { addToWishlist, removeFromWishlist } from "@/lib/hostels-api";
 import { formatPrice } from "@/lib/format";
+import { useAuth } from "@/auth/auth-context";
 
 interface Props {
   hostel: Hostel;
   priority?: boolean;
+  wishlisted?: boolean;
+  onWishlistChange?: (hostelId: string, next: boolean) => void;
 }
 
-export function HostelCard({ hostel, priority }: Props) {
-  const soldOut = hostel.slotsLeft === 0;
-  const fewLeft = !soldOut && hostel.slotsLeft <= 3;
+export function HostelCard({ hostel, priority, wishlisted = false, onWishlistChange }: Props) {
+  const { user, profile } = useAuth();
+  const soldOut = hostel.slots_left === 0;
+  const fewLeft = !soldOut && hostel.slots_left <= 3;
+  const detailParam = hostel.slug ?? hostel.id;
+
+  async function toggleWishlist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || profile?.role !== "student") {
+      toast.info("Sign in as a student to save hostels");
+      return;
+    }
+    try {
+      if (wishlisted) {
+        await removeFromWishlist(user.id, hostel.id);
+        onWishlistChange?.(hostel.id, false);
+      } else {
+        await addToWishlist(user.id, hostel.id);
+        onWishlistChange?.(hostel.id, true);
+        toast.success("Saved to your wishlist");
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not update wishlist");
+    }
+  }
 
   return (
     <Link
       to="/hostel/$hostelId"
-      params={{ hostelId: hostel.id }}
+      params={{ hostelId: detailParam }}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -35,23 +63,21 @@ export function HostelCard({ hostel, priority }: Props) {
             </span>
           ) : fewLeft ? (
             <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-accent-foreground">
-              Only {hostel.slotsLeft} left
+              Only {hostel.slots_left} left
             </span>
           ) : (
             <span className="rounded-full bg-success/95 px-2.5 py-1 text-[11px] font-semibold text-success-foreground">
-              {hostel.slotsLeft} slots
+              {hostel.slots_left} slots
             </span>
           )}
         </div>
         <button
           type="button"
-          aria-label="Save to wishlist"
-          onClick={(e) => {
-            e.preventDefault();
-          }}
+          aria-label={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
+          onClick={toggleWishlist}
           className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm hover:bg-background"
         >
-          <Heart className="h-4 w-4" />
+          <Heart className={`h-4 w-4 ${wishlisted ? "fill-accent text-accent" : ""}`} />
         </button>
       </div>
 
@@ -61,19 +87,19 @@ export function HostelCard({ hostel, priority }: Props) {
           <div className="flex items-center gap-1 text-sm font-medium">
             <Star className="h-4 w-4 fill-accent text-accent" />
             <span>{hostel.rating.toFixed(1)}</span>
-            <span className="text-muted-foreground">({hostel.reviewsCount})</span>
+            <span className="text-muted-foreground">({hostel.reviews_count})</span>
           </div>
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{hostel.location}</span>
           <span className="mx-1">•</span>
-          <span className="shrink-0">{hostel.distanceKm} km from {hostel.institution.split(" ")[0]}</span>
+          <span className="shrink-0">{hostel.distance_km} km from {hostel.institution.split(" ")[0]}</span>
         </div>
 
         <div className="mt-auto flex items-end justify-between pt-2">
           <div>
-            <div className="text-lg font-bold leading-none">{formatPrice(hostel.pricePerMonth, hostel.currency)}</div>
+            <div className="text-lg font-bold leading-none">{formatPrice(hostel.price_per_month, hostel.currency)}</div>
             <div className="text-xs text-muted-foreground">per month</div>
           </div>
           <span className="inline-flex h-9 items-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition group-hover:bg-primary/90">
