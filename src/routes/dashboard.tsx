@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox, Plus, Pencil, Trash2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/auth-context";
@@ -9,12 +9,16 @@ import {
   listIncomingBookings,
   listWishlistedHostels,
   updateBookingStatus,
+  listMyHostels,
+  deleteHostel,
   type BookingWithHostel,
   type IncomingBooking,
   type Hostel,
   type BookingStatus,
 } from "@/lib/hostels-api";
 import { HostelCard } from "@/components/hostel-card";
+import { HostelForm } from "@/components/hostel-form";
+import { VerificationCard } from "@/components/verification-form";
 import { formatPrice } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard")({
@@ -53,11 +57,28 @@ function DashboardPage() {
           Hi, {profile.full_name?.split(" ")[0] ?? "there"} 👋
         </h1>
         <p className="text-sm text-muted-foreground">
-          {profile.role === "landlord" ? "Manage your hostels and incoming bookings." : "Track your bookings and saved hostels."}
+          {profile.role === "landlord"
+            ? "Manage your hostels, verification, and incoming bookings."
+            : profile.role === "admin"
+            ? "Welcome admin — open the admin panel for moderation tools."
+            : "Track your bookings and saved hostels."}
         </p>
       </header>
 
-      {profile.role === "landlord" ? <LandlordDashboard userId={user.id} /> : <StudentDashboard userId={user.id} />}
+      {profile.role === "admin" && (
+        <Link
+          to="/admin"
+          className="mb-5 inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background"
+        >
+          <ShieldCheck className="h-4 w-4" /> Open admin panel
+        </Link>
+      )}
+
+      {profile.role === "landlord" ? (
+        <LandlordDashboard userId={user.id} isVerified={profile.is_verified} />
+      ) : (
+        <StudentDashboard userId={user.id} />
+      )}
     </div>
   );
 }
@@ -185,24 +206,18 @@ function StudentDashboard({ userId }: { userId: string }) {
   );
 }
 
-function LandlordDashboard({ userId }: { userId: string }) {
-  const [tab, setTab] = useState<"incoming" | "hostels">("incoming");
+function LandlordDashboard({ userId, isVerified }: { userId: string; isVerified: boolean }) {
+  const [tab, setTab] = useState<"hostels" | "incoming" | "verification">("hostels");
   const [incoming, setIncoming] = useState<IncomingBooking[]>([]);
-  const [myHostels, setMyHostels] = useState<{ id: string; name: string; slug: string | null; location: string; slots_left: number; total_slots: number; is_published: boolean }[]>([]);
+  const [myHostels, setMyHostels] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Hostel | null>(null);
+  const [creating, setCreating] = useState(false);
 
   async function refresh() {
     setLoading(true);
     try {
-      const [b, h] = await Promise.all([
-        listIncomingBookings(userId),
-        supabase
-          .from("hostels")
-          .select("id, name, slug, location, slots_left, total_slots, is_published")
-          .eq("owner_id", userId)
-          .order("created_at", { ascending: false })
-          .then(({ data }) => (data ?? []) as any),
-      ]);
+      const [b, h] = await Promise.all([listIncomingBookings(userId), listMyHostels(userId)]);
       setIncoming(b);
       setMyHostels(h);
     } finally {
@@ -224,103 +239,189 @@ function LandlordDashboard({ userId }: { userId: string }) {
     }
   }
 
+  async function handleDelete(h: Hostel) {
+    if (!confirm(`Delete "${h.name}"? This cannot be undone.`)) return;
+    try {
+      await deleteHostel(h.id);
+      toast.success("Hostel deleted");
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not delete");
+    }
+  }
+
   const pendingCount = incoming.filter((b) => b.status === "pending").length;
+  const showForm = creating || !!editing;
 
   return (
     <div>
-      <div className="flex gap-2 border-b border-border">
-        <TabButton active={tab === "incoming"} onClick={() => setTab("incoming")} icon={<Inbox className="h-4 w-4" />}>
-          Incoming ({pendingCount} pending)
-        </TabButton>
+      {!isVerified && (
+        <div className="mb-5 rounded-2xl bg-accent/10 border border-accent/30 p-4 text-sm flex items-start gap-3">
+          <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Verification required to publish</p>
+            <p className="text-muted-foreground">
+              You can create draft listings now, but they won't be visible to students until your account is verified.{" "}
+              <button onClick={() => setTab("verification")} className="underline font-semibold">
+                Complete verification →
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 border-b border-border overflow-x-auto">
         <TabButton active={tab === "hostels"} onClick={() => setTab("hostels")} icon={<Home className="h-4 w-4" />}>
           My hostels ({myHostels.length})
+        </TabButton>
+        <TabButton active={tab === "incoming"} onClick={() => setTab("incoming")} icon={<Inbox className="h-4 w-4" />}>
+          Bookings ({pendingCount} pending)
+        </TabButton>
+        <TabButton active={tab === "verification"} onClick={() => setTab("verification")} icon={<ShieldCheck className="h-4 w-4" />}>
+          Verification
         </TabButton>
       </div>
 
       <div className="mt-6">
-        {loading ? (
-          <Loading />
-        ) : tab === "incoming" ? (
-          incoming.length === 0 ? (
-            <EmptyState
-              title="No bookings yet"
-              body="When students request a room, you'll see them here to approve or reject."
-            />
+        {tab === "verification" ? (
+          <VerificationCard landlordId={userId} />
+        ) : tab === "hostels" ? (
+          showForm ? (
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <h2 className="text-lg font-bold mb-4">{editing ? "Edit hostel" : "New hostel"}</h2>
+              <HostelForm
+                ownerId={userId}
+                hostel={editing}
+                canPublish={isVerified}
+                onSaved={() => {
+                  setCreating(false);
+                  setEditing(null);
+                  refresh();
+                }}
+                onCancel={() => {
+                  setCreating(false);
+                  setEditing(null);
+                }}
+              />
+            </div>
           ) : (
-            <div className="grid gap-4">
-              {incoming.map((b) => (
-                <article key={b.id} className="rounded-2xl border border-border bg-card p-4">
-                  <header className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{b.student.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{b.student.phone ?? "No phone provided"}</p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${STATUS_STYLES[b.status]}`}>
-                      {b.status}
-                    </span>
-                  </header>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    For <span className="font-medium text-foreground">{b.hostel.name}</span>
-                  </p>
-                  <dl className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <Field label="Move-in" value={new Date(b.move_in_date).toLocaleDateString("en-KE")} />
-                    <Field label="Months" value={String(b.months)} />
-                    <Field label="Room" value={b.room_type} />
-                    <Field label="Sent" value={new Date(b.created_at).toLocaleDateString("en-KE")} />
-                  </dl>
-                  {b.message && (
-                    <p className="mt-3 rounded-xl bg-muted p-3 text-xs italic text-muted-foreground">
-                      "{b.message}"
-                    </p>
-                  )}
-                  {b.status === "pending" && (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => decide(b.id, "approved")}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
-                      >
-                        <CheckCircle2 className="h-4 w-4" /> Approve
-                      </button>
-                      <button
-                        onClick={() => decide(b.id, "rejected")}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
-                      >
-                        <XCircle className="h-4 w-4" /> Reject
-                      </button>
-                    </div>
-                  )}
-                  {b.status === "approved" && (
-                    <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-success">
-                      <Clock className="h-3.5 w-3.5" /> Slot reserved automatically
-                    </p>
-                  )}
-                </article>
-              ))}
+            <div>
+              <div className="mb-4 flex justify-end">
+                <button
+                  onClick={() => setCreating(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)]"
+                >
+                  <Plus className="h-4 w-4" /> Add new hostel
+                </button>
+              </div>
+              {loading ? (
+                <Loading />
+              ) : myHostels.length === 0 ? (
+                <EmptyState title="No hostels yet" body="Add your first hostel to start receiving bookings." />
+              ) : (
+                <div className="grid gap-3">
+                  {myHostels.map((h) => (
+                    <article key={h.id} className="flex flex-col sm:flex-row gap-4 rounded-2xl border border-border bg-card p-4">
+                      <img src={h.images[0]} alt={h.name} className="h-24 w-full sm:w-32 rounded-xl object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <Link
+                              to="/hostel/$hostelId"
+                              params={{ hostelId: h.slug ?? h.id }}
+                              className="text-sm font-semibold hover:underline truncate block"
+                            >
+                              {h.name}
+                            </Link>
+                            <p className="text-xs text-muted-foreground truncate">{h.location} • {h.institution}</p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
+                              h.is_published ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {h.is_published ? "Live" : "Draft"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatPrice(h.price_per_month, h.currency)}/mo • {h.slots_left}/{h.total_slots} slots
+                        </p>
+                      </div>
+                      <div className="flex sm:flex-col items-end gap-2">
+                        <button
+                          onClick={() => setEditing(h)}
+                          className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted"
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(h)}
+                          className="inline-flex h-8 items-center gap-1 rounded-full border border-destructive/30 px-3 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           )
-        ) : myHostels.length === 0 ? (
+        ) : loading ? (
+          <Loading />
+        ) : incoming.length === 0 ? (
           <EmptyState
-            title="You haven't listed any hostels yet"
-            body="Listing creation lands in Phase 4. For now, the demo hostels are placeholders."
+            title="No bookings yet"
+            body="When students request a room, you'll see them here to approve or reject."
           />
         ) : (
-          <div className="grid gap-3">
-            {myHostels.map((h) => (
-              <article key={h.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4">
-                <div>
-                  <Link
-                    to="/hostel/$hostelId"
-                    params={{ hostelId: h.slug ?? h.id }}
-                    className="text-sm font-semibold hover:underline"
-                  >
-                    {h.name}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">{h.location}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">{h.slots_left}/{h.total_slots} slots</p>
-                  <p className="text-xs text-muted-foreground">{h.is_published ? "Published" : "Hidden"}</p>
-                </div>
+          <div className="grid gap-4">
+            {incoming.map((b) => (
+              <article key={b.id} className="rounded-2xl border border-border bg-card p-4">
+                <header className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{b.student.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{b.student.phone ?? "No phone provided"}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${STATUS_STYLES[b.status]}`}>
+                    {b.status}
+                  </span>
+                </header>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  For <span className="font-medium text-foreground">{b.hostel.name}</span>
+                </p>
+                <dl className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <Field label="Move-in" value={new Date(b.move_in_date).toLocaleDateString("en-KE")} />
+                  <Field label="Months" value={String(b.months)} />
+                  <Field label="Room" value={b.room_type} />
+                  <Field label="Sent" value={new Date(b.created_at).toLocaleDateString("en-KE")} />
+                </dl>
+                {b.message && (
+                  <p className="mt-3 rounded-xl bg-muted p-3 text-xs italic text-muted-foreground">
+                    "{b.message}"
+                  </p>
+                )}
+                {b.status === "pending" && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => decide(b.id, "approved")}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Approve
+                    </button>
+                    <button
+                      onClick={() => decide(b.id, "rejected")}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
+                    >
+                      <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  </div>
+                )}
+                {b.status === "approved" && (
+                  <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-success">
+                    <Clock className="h-3.5 w-3.5" /> Slot reserved automatically
+                  </p>
+                )}
               </article>
             ))}
           </div>
@@ -344,7 +445,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition ${
+      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition whitespace-nowrap ${
         active ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
       }`}
     >
