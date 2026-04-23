@@ -46,7 +46,7 @@ export function HostelCard({ hostel, priority, wishlisted = false, onWishlistCha
       params={{ hostelId: detailParam }}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)]"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="relative aspect-[16/10] sm:aspect-[3/2] overflow-hidden bg-muted">
         <img
           src={hostel.images[0]}
           alt={hostel.name}
@@ -114,7 +114,7 @@ export function HostelCard({ hostel, priority, wishlisted = false, onWishlistCha
 export function HostelCardSkeleton() {
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="aspect-[4/3] skeleton" />
+      <div className="aspect-[16/10] sm:aspect-[3/2] skeleton" />
       <div className="space-y-3 p-4">
         <div className="h-4 w-3/4 rounded skeleton" />
         <div className="h-3 w-1/2 rounded skeleton" />
