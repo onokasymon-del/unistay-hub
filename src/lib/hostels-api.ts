@@ -285,3 +285,264 @@ export async function listWishlistedHostels(studentId: string): Promise<Hostel[]
     .filter(Boolean)
     .map((h: any) => mapHostel(h));
 }
+
+// ---------------- Landlord hostel CRUD ----------------
+
+export interface HostelInput {
+  name: string;
+  description: string;
+  location: string;
+  institution: string;
+  distance_km: number;
+  price_per_month: number;
+  total_slots: number;
+  room_types: RoomType[];
+  amenities: Amenity[];
+  rules: string[];
+  is_published: boolean;
+}
+
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+export async function listMyHostels(ownerId: string): Promise<Hostel[]> {
+  const { data, error } = await supabase
+    .from("hostels")
+    .select("*, hostel_images(url, position)")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as HostelRow[]).map(mapHostel);
+}
+
+export async function createHostel(ownerId: string, input: HostelInput): Promise<Hostel> {
+  const slug = `${slugify(input.name)}-${Math.random().toString(36).slice(2, 6)}`;
+  const { data, error } = await supabase
+    .from("hostels")
+    .insert({
+      ...input,
+      owner_id: ownerId,
+      slug,
+      slots_left: input.total_slots,
+    })
+    .select("*, hostel_images(url, position)")
+    .single();
+  if (error) throw error;
+  return mapHostel(data as HostelRow);
+}
+
+export async function updateHostel(id: string, input: Partial<HostelInput>): Promise<void> {
+  const { error } = await supabase.from("hostels").update(input).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteHostel(id: string): Promise<void> {
+  // Best-effort: clean up images in storage first
+  const { data: imgs } = await supabase.from("hostel_images").select("url").eq("hostel_id", id);
+  const paths = (imgs ?? [])
+    .map((i: any) => extractStoragePath(i.url, "hostel-images"))
+    .filter((p): p is string => Boolean(p));
+  if (paths.length > 0) {
+    await supabase.storage.from("hostel-images").remove(paths);
+  }
+  const { error } = await supabase.from("hostels").delete().eq("id", id);
+  if (error) throw error;
+}
+
+function extractStoragePath(url: string, bucket: string): string | null {
+  const marker = `/${bucket}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return url.slice(idx + marker.length);
+}
+
+export async function uploadHostelImage(hostelId: string, file: File, position: number): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `${hostelId}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from("hostel-images")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) throw upErr;
+  const { data: pub } = supabase.storage.from("hostel-images").getPublicUrl(path);
+  const { error: insErr } = await supabase
+    .from("hostel_images")
+    .insert({ hostel_id: hostelId, url: pub.publicUrl, position });
+  if (insErr) throw insErr;
+  return pub.publicUrl;
+}
+
+export async function deleteHostelImage(hostelId: string, url: string): Promise<void> {
+  const path = extractStoragePath(url, "hostel-images");
+  if (path) {
+    await supabase.storage.from("hostel-images").remove([path]);
+  }
+  await supabase.from("hostel_images").delete().eq("hostel_id", hostelId).eq("url", url);
+}
+
+export async function listHostelImages(hostelId: string): Promise<{ url: string; position: number }[]> {
+  const { data, error } = await supabase
+    .from("hostel_images")
+    .select("url, position")
+    .eq("hostel_id", hostelId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as { url: string; position: number }[];
+}
+
+// ---------------- Landlord verification ----------------
+
+export type VerificationStatus = "pending" | "approved" | "rejected";
+
+export interface LandlordVerification {
+  id: string;
+  landlord_id: string;
+  id_document_path: string;
+  ownership_document_path: string;
+  status: VerificationStatus;
+  admin_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export async function getMyVerification(landlordId: string): Promise<LandlordVerification | null> {
+  const { data, error } = await supabase
+    .from("landlord_verifications")
+    .select("*")
+    .eq("landlord_id", landlordId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as LandlordVerification | null) ?? null;
+}
+
+async function uploadVerificationDoc(landlordId: string, file: File, kind: "id" | "ownership") {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "pdf";
+  const path = `${landlordId}/${kind}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("verification-docs")
+    .upload(path, file, { contentType: file.type, upsert: true });
+  if (error) throw error;
+  return path;
+}
+
+export async function submitVerification(
+  landlordId: string,
+  idDoc: File,
+  ownershipDoc: File,
+): Promise<void> {
+  const idPath = await uploadVerificationDoc(landlordId, idDoc, "id");
+  const ownershipPath = await uploadVerificationDoc(landlordId, ownershipDoc, "ownership");
+
+  const existing = await getMyVerification(landlordId);
+  if (existing) {
+    const { error } = await supabase
+      .from("landlord_verifications")
+      .update({
+        id_document_path: idPath,
+        ownership_document_path: ownershipPath,
+        status: "pending",
+        admin_notes: null,
+      })
+      .eq("landlord_id", landlordId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("landlord_verifications").insert({
+      landlord_id: landlordId,
+      id_document_path: idPath,
+      ownership_document_path: ownershipPath,
+    });
+    if (error) throw error;
+  }
+}
+
+export async function getVerificationDocSignedUrl(path: string, expiresIn = 300): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from("verification-docs")
+    .createSignedUrl(path, expiresIn);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+// ---------------- Admin ----------------
+
+export interface VerificationWithLandlord extends LandlordVerification {
+  landlord: { id: string; full_name: string; phone: string | null; institution_name: string | null };
+}
+
+export async function adminListVerifications(): Promise<VerificationWithLandlord[]> {
+  const { data, error } = await supabase
+    .from("landlord_verifications")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as LandlordVerification[];
+  if (rows.length === 0) return [];
+  const ids = Array.from(new Set(rows.map((r) => r.landlord_id)));
+  const { data: profs } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone, institution_name")
+    .in("id", ids);
+  const map: Record<string, any> = {};
+  for (const p of profs ?? []) map[p.id] = p;
+  return rows.map((r) => ({
+    ...r,
+    landlord: map[r.landlord_id] ?? {
+      id: r.landlord_id,
+      full_name: "Unknown",
+      phone: null,
+      institution_name: null,
+    },
+  }));
+}
+
+export async function adminDecideVerification(
+  verificationId: string,
+  reviewerId: string,
+  status: "approved" | "rejected",
+  notes?: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("landlord_verifications")
+    .update({
+      status,
+      admin_notes: notes ?? null,
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", verificationId);
+  if (error) throw error;
+}
+
+export async function adminListAllHostels(): Promise<Hostel[]> {
+  const { data, error } = await supabase
+    .from("hostels")
+    .select("*, hostel_images(url, position)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as HostelRow[]).map(mapHostel);
+}
+
+export async function adminSetHostelPublished(id: string, isPublished: boolean): Promise<void> {
+  const { error } = await supabase.from("hostels").update({ is_published: isPublished }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function adminListAllReviews(): Promise<(Review & { hostel_name: string })[]> {
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("*, hostel:hostels(name)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ ...r, hostel_name: r.hostel?.name ?? "—" }));
+}
+
+export async function adminDeleteReview(id: string): Promise<void> {
+  const { error } = await supabase.from("reviews").delete().eq("id", id);
+  if (error) throw error;
+}
