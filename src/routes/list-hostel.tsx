@@ -44,12 +44,12 @@ function ListHostelPage() {
           </ul>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <button
-              disabled
-              className="inline-flex h-12 items-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] disabled:opacity-90"
+            <Link
+              to="/signup/landlord"
+              className="inline-flex h-12 items-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)]"
             >
-              Get started — coming soon
-            </button>
+              Get started — list your hostel
+            </Link>
             <Link
               to="/"
               className="inline-flex h-12 items-center rounded-full border border-border px-6 text-sm font-semibold"
