@@ -162,6 +162,45 @@ export type Database = {
         }
         Relationships: []
       }
+      landlord_verifications: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          id_document_path: string
+          landlord_id: string
+          ownership_document_path: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["verification_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          id_document_path: string
+          landlord_id: string
+          ownership_document_path: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          id_document_path?: string
+          landlord_id?: string
+          ownership_document_path?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["verification_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -172,6 +211,7 @@ export type Database = {
           institution_type:
             | Database["public"]["Enums"]["institution_type"]
             | null
+          is_verified: boolean
           phone: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -185,6 +225,7 @@ export type Database = {
           institution_type?:
             | Database["public"]["Enums"]["institution_type"]
             | null
+          is_verified?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -198,6 +239,7 @@ export type Database = {
           institution_type?:
             | Database["public"]["Enums"]["institution_type"]
             | null
+          is_verified?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -322,6 +364,7 @@ export type Database = {
       booking_status: "pending" | "approved" | "rejected" | "cancelled"
       institution_type: "university" | "college" | "tti"
       room_type: "single" | "shared" | "ensuite"
+      verification_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -462,6 +505,7 @@ export const Constants = {
       booking_status: ["pending", "approved", "rejected", "cancelled"],
       institution_type: ["university", "college", "tti"],
       room_type: ["single", "shared", "ensuite"],
+      verification_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
