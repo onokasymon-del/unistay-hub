@@ -58,6 +58,15 @@ export function SiteHeader() {
               Dashboard
             </Link>
           )}
+          {profile?.role === "admin" && (
+            <Link
+              to="/admin"
+              className="px-3 py-2 text-sm font-medium text-accent hover:text-foreground"
+              activeProps={{ className: "px-3 py-2 text-sm font-medium text-foreground" }}
+            >
+              Admin
+            </Link>
+          )}
         </nav>
 
         <div className="ml-auto md:ml-2 flex items-center gap-2">
@@ -133,6 +142,11 @@ export function SiteHeader() {
             {isAuthenticated && (
               <Link to="/dashboard" onClick={() => setOpen(false)} className="py-3 text-base font-medium">
                 Dashboard
+              </Link>
+            )}
+            {profile?.role === "admin" && (
+              <Link to="/admin" onClick={() => setOpen(false)} className="py-3 text-base font-medium text-accent">
+                Admin
               </Link>
             )}
 
