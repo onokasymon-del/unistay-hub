@@ -187,7 +187,7 @@ function StudentDashboard({ userId }: { userId: string }) {
                         )}
                       </div>
                     )}
-                    {chatId === b.id && user && (
+                    {chatId === b.id && (
                       <div className="mt-3">
                         <MessageThread
                           bookingId={b.id}
