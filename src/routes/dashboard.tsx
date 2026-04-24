@@ -89,6 +89,7 @@ function StudentDashboard({ userId }: { userId: string }) {
   const [bookings, setBookings] = useState<BookingWithHostel[]>([]);
   const [wishlist, setWishlist] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
