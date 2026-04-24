@@ -168,14 +168,32 @@ function StudentDashboard({ userId }: { userId: string }) {
                       <Field label="Room" value={b.room_type} />
                       <Field label="Total" value={formatPrice(b.hostel.price_per_month * b.months, b.hostel.currency)} />
                     </dl>
-                    {b.status === "pending" && (
-                      <div className="mt-3">
+                    {(b.status === "pending" || b.status === "approved") && (
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
                         <button
-                          onClick={() => cancelBooking(b.id)}
-                          className="text-xs font-semibold text-destructive hover:underline"
+                          onClick={() => setChatId(chatId === b.id ? null : b.id)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted"
                         >
-                          Cancel request
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {chatId === b.id ? "Hide chat" : "Message landlord"}
                         </button>
+                        {b.status === "pending" && (
+                          <button
+                            onClick={() => cancelBooking(b.id)}
+                            className="text-xs font-semibold text-destructive hover:underline"
+                          >
+                            Cancel request
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {chatId === b.id && user && (
+                      <div className="mt-3">
+                        <MessageThread
+                          bookingId={b.id}
+                          viewerId={userId}
+                          counterpartName="the landlord"
+                        />
                       </div>
                     )}
                   </div>
