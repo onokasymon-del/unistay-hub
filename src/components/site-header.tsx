@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Search, Heart, Menu, X, LogOut, User as UserIcon } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/auth/auth-context";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -70,6 +71,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto md:ml-2 flex items-center gap-2">
+          {isAuthenticated && <NotificationBell />}
           <button
             aria-label="Wishlist"
             className="hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox, Plus, Pencil, Trash2, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox, Plus, Pencil, Trash2, ShieldCheck, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/auth-context";
@@ -19,6 +19,7 @@ import {
 import { HostelCard } from "@/components/hostel-card";
 import { HostelForm } from "@/components/hostel-form";
 import { VerificationCard } from "@/components/verification-form";
+import { MessageThread } from "@/components/message-thread";
 import { formatPrice } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard")({
@@ -88,6 +89,7 @@ function StudentDashboard({ userId }: { userId: string }) {
   const [bookings, setBookings] = useState<BookingWithHostel[]>([]);
   const [wishlist, setWishlist] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -166,14 +168,32 @@ function StudentDashboard({ userId }: { userId: string }) {
                       <Field label="Room" value={b.room_type} />
                       <Field label="Total" value={formatPrice(b.hostel.price_per_month * b.months, b.hostel.currency)} />
                     </dl>
-                    {b.status === "pending" && (
-                      <div className="mt-3">
+                    {(b.status === "pending" || b.status === "approved") && (
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
                         <button
-                          onClick={() => cancelBooking(b.id)}
-                          className="text-xs font-semibold text-destructive hover:underline"
+                          onClick={() => setChatId(chatId === b.id ? null : b.id)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted"
                         >
-                          Cancel request
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {chatId === b.id ? "Hide chat" : "Message landlord"}
                         </button>
+                        {b.status === "pending" && (
+                          <button
+                            onClick={() => cancelBooking(b.id)}
+                            className="text-xs font-semibold text-destructive hover:underline"
+                          >
+                            Cancel request
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {chatId === b.id && (
+                      <div className="mt-3">
+                        <MessageThread
+                          bookingId={b.id}
+                          viewerId={userId}
+                          counterpartName="the landlord"
+                        />
                       </div>
                     )}
                   </div>
@@ -213,6 +233,7 @@ function LandlordDashboard({ userId, isVerified }: { userId: string; isVerified:
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Hostel | null>(null);
   const [creating, setCreating] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -401,26 +422,46 @@ function LandlordDashboard({ userId, isVerified }: { userId: string; isVerified:
                     "{b.message}"
                   </p>
                 )}
-                {b.status === "pending" && (
-                  <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {b.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => decide(b.id, "approved")}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Approve
+                      </button>
+                      <button
+                        onClick={() => decide(b.id, "rejected")}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
+                      >
+                        <XCircle className="h-4 w-4" /> Reject
+                      </button>
+                    </>
+                  )}
+                  {(b.status === "pending" || b.status === "approved") && (
                     <button
-                      onClick={() => decide(b.id, "approved")}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
+                      onClick={() => setChatId(chatId === b.id ? null : b.id)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold hover:bg-muted"
                     >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
+                      <MessageSquare className="h-4 w-4" />
+                      {chatId === b.id ? "Hide chat" : "Message student"}
                     </button>
-                    <button
-                      onClick={() => decide(b.id, "rejected")}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
-                    >
-                      <XCircle className="h-4 w-4" /> Reject
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
                 {b.status === "approved" && (
                   <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-success">
                     <Clock className="h-3.5 w-3.5" /> Slot reserved automatically
                   </p>
+                )}
+                {chatId === b.id && (
+                  <div className="mt-3">
+                    <MessageThread
+                      bookingId={b.id}
+                      viewerId={userId}
+                      counterpartName={b.student.full_name}
+                    />
+                  </div>
                 )}
               </article>
             ))}
