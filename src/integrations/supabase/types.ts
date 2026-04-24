@@ -201,6 +201,77 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          body: string
+          booking_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          booking_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          data: Json
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -350,6 +421,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_booking_participant: {
+        Args: { _booking_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       amenity:
@@ -363,6 +438,13 @@ export type Database = {
       app_role: "student" | "landlord" | "admin"
       booking_status: "pending" | "approved" | "rejected" | "cancelled"
       institution_type: "university" | "college" | "tti"
+      notification_type:
+        | "booking_requested"
+        | "booking_approved"
+        | "booking_rejected"
+        | "message_received"
+        | "verification_approved"
+        | "verification_rejected"
       room_type: "single" | "shared" | "ensuite"
       verification_status: "pending" | "approved" | "rejected"
     }
@@ -504,6 +586,14 @@ export const Constants = {
       app_role: ["student", "landlord", "admin"],
       booking_status: ["pending", "approved", "rejected", "cancelled"],
       institution_type: ["university", "college", "tti"],
+      notification_type: [
+        "booking_requested",
+        "booking_approved",
+        "booking_rejected",
+        "message_received",
+        "verification_approved",
+        "verification_rejected",
+      ],
       room_type: ["single", "shared", "ensuite"],
       verification_status: ["pending", "approved", "rejected"],
     },
