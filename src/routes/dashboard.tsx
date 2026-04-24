@@ -233,6 +233,7 @@ function LandlordDashboard({ userId, isVerified }: { userId: string; isVerified:
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Hostel | null>(null);
   const [creating, setCreating] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -421,26 +422,46 @@ function LandlordDashboard({ userId, isVerified }: { userId: string; isVerified:
                     "{b.message}"
                   </p>
                 )}
-                {b.status === "pending" && (
-                  <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {b.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => decide(b.id, "approved")}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Approve
+                      </button>
+                      <button
+                        onClick={() => decide(b.id, "rejected")}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
+                      >
+                        <XCircle className="h-4 w-4" /> Reject
+                      </button>
+                    </>
+                  )}
+                  {(b.status === "pending" || b.status === "approved") && (
                     <button
-                      onClick={() => decide(b.id, "approved")}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-success px-4 text-xs font-semibold text-success-foreground"
+                      onClick={() => setChatId(chatId === b.id ? null : b.id)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold hover:bg-muted"
                     >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
+                      <MessageSquare className="h-4 w-4" />
+                      {chatId === b.id ? "Hide chat" : "Message student"}
                     </button>
-                    <button
-                      onClick={() => decide(b.id, "rejected")}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-xs font-semibold"
-                    >
-                      <XCircle className="h-4 w-4" /> Reject
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
                 {b.status === "approved" && (
                   <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-success">
                     <Clock className="h-3.5 w-3.5" /> Slot reserved automatically
                   </p>
+                )}
+                {chatId === b.id && (
+                  <div className="mt-3">
+                    <MessageThread
+                      bookingId={b.id}
+                      viewerId={userId}
+                      counterpartName={b.student.full_name}
+                    />
+                  </div>
                 )}
               </article>
             ))}
