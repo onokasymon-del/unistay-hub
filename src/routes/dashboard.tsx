@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox, Plus, Pencil, Trash2, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Heart, Home, Inbox, Plus, Pencil, Trash2, ShieldCheck, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/auth-context";
@@ -19,6 +19,7 @@ import {
 import { HostelCard } from "@/components/hostel-card";
 import { HostelForm } from "@/components/hostel-form";
 import { VerificationCard } from "@/components/verification-form";
+import { MessageThread } from "@/components/message-thread";
 import { formatPrice } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard")({
